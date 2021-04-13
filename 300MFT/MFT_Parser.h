@@ -30,12 +30,13 @@ public:
 	static std::string tableColumn;
 	static std::map<ULONGLONG, Entry_Info> MFTdb;
 	static std::map<ULONGLONG, std::string> dirFullPath;
-	static std::map<ULONGLONG, Entry_Info> FileInfo;
+	static std::map<ULONGLONG, MFT_Collumn> FileInfo;
+	static std::map<ULONGLONG, MFT_Collumn> SqlFileInfo;
 	UCHAR* MFTrecentBufEntryOffset;
 	UCHAR* MFTEntry;
 
 	wchar_t fileName[255];
-
+	
 	ULONGLONG FileCount;
 	/// <summary>
 	/// 여기 까지 사용 밑에는 수정 예정
@@ -87,5 +88,7 @@ public:
 	int FileFullPath(void);
 	int FindRootDir(ULONGLONG taskEntryNum, ULONGLONG parentEntryNum);
 	int MakeQuery(std::string &query,std::string tableName,ULONGLONG entryNum);
+	static int SelectCallback(void* data, int argc, char** argv, char** azColName);
+	int ModifyAndCreateFileFind(void);
 	
 };

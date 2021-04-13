@@ -12,8 +12,11 @@ public:
 	int CloseDB();
 
 	int CreaetTable(std::string tableName);
+	int SelectTable(std::string tableName, int (*callback)(void*, int, char**, char**));
+	bool CheckTable(std::string tableName);
 	int WstringExec(std::wstring queryString);
 	int StringExec(std::string tableName, std::string &queryString);
+	
 	
 
 protected:

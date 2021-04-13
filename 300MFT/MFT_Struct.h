@@ -186,3 +186,10 @@ typedef struct _Entry_Info
 	
 }Entry_Info;
 
+typedef struct _MFT_Collumn
+{
+	std::string FileName;
+	ULONGLONG LSN;
+	ULONGLONG USN;
+
+}MFT_Collumn;

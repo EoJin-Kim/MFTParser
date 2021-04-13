@@ -85,6 +85,42 @@ int MySqlite::CreaetTable(std::string tableName)
 		return 0;
 	}
 }
+int MySqlite::SelectTable(std::string tableName, int (*callback)(void *,int,char **,char**))
+{
+	char* zErrMsg = 0;
+	int rc;
+	
+	const char* data = "Callback function called";
+	const char* sql = "SELECT * from FileInfo;";
+	rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
+	if (rc != SQLITE_OK) {
+		fprintf(stderr, "SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return 0;
+	}
+	else {
+		fprintf(stdout, "Operation done successfully\n");
+		return 1;
+	}
+}
+bool MySqlite::CheckTable(std::string tableName)
+{
+
+	sqlite3_stmt* stmt;
+	char query[1024] = "";
+	std::string tableSql = "SELECT name FROM sqlite_master WHERE name = '%s';";
+	sprintf(query, tableSql.c_str(), tableName.c_str());
+	bool result = false;
+	sqlite3_prepare_v2(this->db, query, -1, &stmt, NULL);
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		result = true;
+	} 
+	sqlite3_reset(stmt); 
+	sqlite3_finalize(stmt);
+	return result;
+	
+}
+
 
 int MySqlite::StringExec(std::string tableName, std::string &queryString)
 {
@@ -105,7 +141,6 @@ int MySqlite::StringExec(std::string tableName, std::string &queryString)
 
 		if (File == INVALID_HANDLE_VALUE)
 		{
-
 			return 0;
 		}
 		WriteFile(File, queryString.c_str(), queryString.length(), &dwWrite, NULL);

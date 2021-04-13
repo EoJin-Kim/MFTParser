@@ -657,10 +657,10 @@ int MFT_Parser::FileFullPath(void)
 			if (!it.second.FileName.empty())
 			{
 				FileInfo[it.first].FileName.append(dirFullPath[it.second.ParentEntyrNum]).append("/").append(it.second.FileName);
-				FileInfo[it.first].EntryFlags = it.second.EntryFlags;
+				//FileInfo[it.first].EntryFlags = it.second.EntryFlags;
 				FileInfo[it.first].LSN = it.second.LSN;
 				FileInfo[it.first].USN = it.second.USN;
-				FileInfo[it.first].ParentEntyrNum = it.second.ParentEntyrNum;
+				//FileInfo[it.first].ParentEntyrNum = it.second.ParentEntyrNum;
 			}
 		}
 	}
@@ -851,9 +851,95 @@ int MFT_Parser::MakeQuery(std::string &query, std::string tableName, ULONGLONG e
 	return 1;
 
 }
+int MFT_Parser::SelectCallback(void *data, int argc, char **argv, char **azColName)
+{
+	//fprintf(stderr, "%s: \n", (const char*)data);
+	//_tprintf(TEXT("Column Count : %d\n"), argc);
+	/*
+	for (int i = 0; i < argc; i++)
+	{
+		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+	}
+	printf("\n");
+	*/
+	char* pos = NULL;
+	ULONGLONG EntryNum = strtoull(argv[0], &pos, 10);
+	ULONGLONG LSN = strtoull(argv[1],&pos,10);
+	ULONGLONG USN = strtoull(argv[2], &pos, 10);
+	std::string fileName = argv[3];
+	
+	MFT_Parser::SqlFileInfo[EntryNum].LSN = LSN;
+	MFT_Parser::SqlFileInfo[EntryNum].USN = USN;
+	MFT_Parser::SqlFileInfo[EntryNum].FileName= fileName;
+
+	return 0;
+}
+int MFT_Parser::ModifyAndCreateFileFind(void)
+{
+	DWORD dwWrite, dwRead;
+
+	std::string createEntry = "CreateFile -> MFTEntry : %llu\n";
+	std::string createFilename = "CreateFile -> FileName : %s\n";
+	std::string modifyEntry = "ModifyFile -> MFTEntry : %llu\n";
+	std::string modifyFilename = "ModifyFile -> FileName : %s\n";
+	char WriteData[4096];
+	char lineFeed = '\n';
+	HANDLE File = CreateFileA("ModifyAndCreate.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+	if (File == INVALID_HANDLE_VALUE)
+	{
+		_tprintf(TEXT("File Not Open\n"));
+		return 0;
+
+	}
+	
+	int modifyAndCreateFIleCount = 0;
+	// 현재 FileInfo에 SqlFileInfo 엔트리가 없는 경우
+	for (auto it : MFT_Parser::FileInfo) {	
+		if (MFT_Parser::SqlFileInfo.find(it.first) == MFT_Parser::SqlFileInfo.end()) {
+			sprintf(WriteData, createEntry.c_str(), it.first);
+			WriteFile(File, WriteData, strlen(WriteData) * sizeof(char), &dwWrite, NULL);
+			sprintf(WriteData, createFilename.c_str(), it.second.FileName.c_str());
+			WriteFile(File, WriteData, strlen(WriteData) * sizeof(char), &dwWrite, NULL);
+			modifyAndCreateFIleCount += 1;
+			//_tprintf(TEXT("CreateFile -> MFTEntry : %llu\n"), it.first);
+			//_tprintf(TEXT("CreateFile -> FileName : %s\n"), it.second.FileName.c_str());
+		}
+		//현재 FileInfo에 SqlFileInfo 엔트리가 없는 경우
+		else {
+			//  found
+			// 파일 이름 및 경로 같으면 LSN,USN 같은지 체크
+			if (it.second.FileName.compare(MFT_Parser::SqlFileInfo[it.first].FileName)==0)
+			{
+				//
+				if (it.second.LSN != MFT_Parser::SqlFileInfo[it.first].LSN || it.second.USN != MFT_Parser::SqlFileInfo[it.first].USN)
+				{
+					sprintf(WriteData, modifyEntry.c_str(), it.first);
+					WriteFile(File, WriteData, strlen(WriteData) * sizeof(char), &dwWrite, NULL);
+					sprintf(WriteData, modifyFilename.c_str(), it.second.FileName.c_str());
+					WriteFile(File, WriteData, strlen(WriteData) * sizeof(char), &dwWrite, NULL);
+					modifyAndCreateFIleCount += 1;
+				}
+			}
+			// 파일 이름이 다르면 생성된 파일
+			else
+			{
+				sprintf(WriteData, createEntry.c_str(), it.first);
+				WriteFile(File, WriteData, strlen(WriteData) * sizeof(char), &dwWrite, NULL);
+				sprintf(WriteData, createFilename.c_str(), it.second.FileName.c_str());
+				WriteFile(File, WriteData, strlen(WriteData) * sizeof(char), &dwWrite, NULL);
+				modifyAndCreateFIleCount += 1;
+			}
+		}
+	}
+	_tprintf(TEXT("Modify And Create File Count : %d\n"),modifyAndCreateFIleCount);
+	CloseHandle(File);
+	return 1;
+}
 std::string MFT_Parser::tableColumn="'MFTentry','LSN','USN','Path'";
 std::map<ULONGLONG, Entry_Info> MFT_Parser::MFTdb;
-std::map<ULONGLONG, Entry_Info> MFT_Parser::FileInfo;
+std::map<ULONGLONG, MFT_Collumn> MFT_Parser::FileInfo;
+std::map<ULONGLONG,MFT_Collumn> MFT_Parser::SqlFileInfo;
 UCHAR* MFT_Parser::MFTbuf;
 ULONGLONG MFT_Parser::MFTEntryCount;
 UCHAR* MFT_Parser::MFTstartBufOffset;

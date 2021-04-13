@@ -5,7 +5,7 @@
 // 현재 바이트 읽을때 offset 이도시 현재 위치기준으로 이동 후 읽는다. 
 int _tmain()
 {
-
+    
 
     clock_t start, end;
     double totalTime;
@@ -14,6 +14,7 @@ int _tmain()
 
     MFT_Parser* myDrive = new MFT_Parser();
     myDrive->SetDrive(driveName);
+    _tprintf(TEXT("MFT Loading\n"));
     myDrive->ReadMFT(myDrive->hdrive);
     myDrive->FixUpArrayRecover();
 
@@ -21,20 +22,7 @@ int _tmain()
     myDrive->MFTFileList(myDrive->hdrive);
 
     
-    /*
-    int recent = 849332;
-    int parent = 0;
-    while (true)
-    {
-        if (recent == 5)
-        {
-            _tprintf(TEXT("Root\n"));
-            break;
-        }
-        _tprintf(TEXT("Directory Name : %s Parent : 0x%llX\n"), MFT_Parser::MFTdb[recent].FileName.c_str(), MFT_Parser::MFTdb[recent].ParentEntyrNum);
-        recent = MFT_Parser::MFTdb[recent].ParentEntyrNum;
-    }
-    */
+
 
 
     /*
@@ -50,6 +38,7 @@ int _tmain()
     }
     */
     MFT_Parser* MFTtmp = new MFT_Parser();
+    _tprintf(TEXT("MFT Traversal\n"));
     MFTtmp->MFTTraversal(0, MFT_Parser::MFTEntryCount);
     //MFTtmp->MFTTraversal(51594, MFT_Parser::MFTEntryCount, wFile);
 
@@ -59,13 +48,14 @@ int _tmain()
 
     }
     */
-    
+    delete[] MFT_Parser::MFTbuf;
+    _tprintf(TEXT("MFT Dir Full Path\n"));
     myDrive->DirFullPath();
+    _tprintf(TEXT("MFT File Full Path\n"));
     myDrive->FileFullPath();
-
-    // Sqlite에 데이터 넣기\
-
     
+    // Sqlite에 데이터 넣기
+    /*
     MySqlite* mySqlite = new MySqlite();
 
     std::string testdb = "file.db";
@@ -96,6 +86,28 @@ int _tmain()
     }
     //_tprintf(TEXT("FileName : %s\n"), MFT_Parser::MFTdb[1].FileName.c_str());
     mySqlite->CloseDB();
+    */
+
+    // sqlite에 저장된 MFT 정보 갖고오기
+    MySqlite * sqlTest = new MySqlite();
+    std::string testdb2 = "file.db";
+    std::string tableName2 = "FileInfo";
+    sqlTest->CreateDB(testdb2);
+    // 테이블이 존재하는 경우
+    if (sqlTest->CheckTable(tableName2))
+    {
+        _tprintf(TEXT("SQLITE Loading\n"));
+        sqlTest->SelectTable(tableName2, MFT_Parser::SelectCallback);
+        _tprintf(TEXT("Modify And Create File Find\n"));
+        myDrive->ModifyAndCreateFileFind();
+    }
+    // 테이블이 존재하지 않는 경우
+    else
+    {
+        _tprintf(TEXT("No Exist\n"));
+    }
+
+
      myDrive->CloseDrive();
     
     end = clock(); //시간 측정 끝
